@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { CheckCircle, Clock, Currency, Globe, MessageCircle, LineChart } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import ChatWidget from './components/ChatWidget';
+import FeaturesSection from './components/FeaturesSection';
 
 // Custom Hook for Intersection Observer to trigger animations on scroll
 const useIntersectionObserver = (options) => {
@@ -40,6 +41,18 @@ function App() {
 		return savedMode === 'dark';
 	});
 
+	// State for modal and form
+	const [isModalOpen, setIsModalOpen] = useState(false);
+	const [selectedPlan, setSelectedPlan] = useState(null);
+	const [formData, setFormData] = useState({
+		name: '',
+		email: '',
+		mobile: '',
+		plan: '',
+	});
+	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [submitSuccess, setSubmitSuccess] = useState('');
+
 	// Apply dark mode class to HTML body
 	useEffect(() => {
 		if (isDarkMode) {
@@ -54,6 +67,46 @@ function App() {
 	// Function to toggle dark mode
 	const toggleDarkMode = () => {
 		setIsDarkMode((prevMode) => !prevMode);
+	};
+
+	// Function to handle plan selection
+	const handlePlanSelect = (plan) => {
+		setSelectedPlan(plan);
+		setFormData((prev) => ({ ...prev, plan: plan.name }));
+		setIsModalOpen(true);
+		setSubmitSuccess('');
+	};
+
+	// Function to handle form submission
+	const handleFormSubmit = (e) => {
+		e.preventDefault();
+		setIsSubmitting(true);
+		setSubmitSuccess('');
+		fetch('https://a804judny2.execute-api.us-east-1.amazonaws.com/auto/sendEmail', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				userEmail: formData.email,
+				name: formData.name,
+				mobile: formData.mobile,
+				plan: formData.plan,
+			}),
+		})
+			.then((response) => {
+				if (response.ok) {
+					setSubmitSuccess('Thank you! Your request has been submitted.');
+					setFormData({ name: '', email: '', mobile: '', plan: '' });
+					setSelectedPlan(null);
+				} else {
+					setSubmitSuccess('Failed to submit. Please try again.');
+				}
+			})
+			.catch(() => {
+				setSubmitSuccess('An error occurred. Please try again later.');
+			})
+			.finally(() => {
+				setIsSubmitting(false);
+			});
 	};
 
 	return (
@@ -100,18 +153,38 @@ function App() {
 			<HeroSection isDarkMode={isDarkMode} />
 			{/* Features Section Component */}
 			<FeaturesSection isDarkMode={isDarkMode} />
-			{/* About Section Component */}
-			<AboutSection isDarkMode={isDarkMode} />
 
 			{/* Comparison Section Component */}
-			<ComparisonSection isDarkMode={isDarkMode} />
+			{/* <ComparisonSection isDarkMode={isDarkMode} /> */}
 			<SeamlessIntegrations isDarkMode={isDarkMode} />
 
 			{/* FAQ Section Component */}
 			<FAQSection isDarkMode={isDarkMode} />
-			<PricingSection />
+			<PricingSection isDarkMode={isDarkMode} onPlanSelect={handlePlanSelect} />
+
+			{/* About Section Component */}
+			<AboutSection isDarkMode={isDarkMode} />
+
 			{/* Footer Component */}
 			<Footer isDarkMode={isDarkMode} />
+
+			{/* Plan Selection Modal */}
+			{isModalOpen && (
+				<PlanSelectionModal
+					isOpen={isModalOpen}
+					onClose={() => setIsModalOpen(false)}
+					selectedPlan={selectedPlan}
+					formData={formData}
+					setFormData={setFormData}
+					onSubmit={handleFormSubmit}
+					isDarkMode={isDarkMode}
+					isSubmitting={isSubmitting}
+					submitSuccess={submitSuccess}
+				/>
+			)}
+
+			{/* Floating Chat Widget */}
+			<ChatWidget isDarkMode={isDarkMode} />
 		</div>
 	);
 }
@@ -167,7 +240,6 @@ function Navbar({ toggleDarkMode, isDarkMode }) {
 }
 
 // Hero Section Component - Updated for Black & White theme with animations and centered content
-
 function HeroSection({ isDarkMode }) {
 	const [email, setEmail] = useState('');
 	const [status, setStatus] = useState('');
@@ -208,131 +280,110 @@ function HeroSection({ isDarkMode }) {
 	};
 
 	return (
-		<section className={`py-10 md:py-14 overflow-hidden relative px-4 ${isDarkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-white to-gray-50'}`}>
-			<div className='container mx-auto flex flex-col items-center justify-center text-center z-10'>
-				<h1
-					className={`text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight mb-4 sm:mb-6 ${
+		<section
+			className={`py-12 md:py-16 overflow-hidden relative px-4  ${
+				isDarkMode
+					? 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900'
+					: 'bg-gradient-to-br from-white to-gray-50'
+			}`}
+		>
+			<div className='container mx-auto flex flex-col md:flex-row items-center justify-center gap-8 md:gap-12'>
+				<div className='md:w-1/2 text-center z-10 animate-slideInUp'>
+					<h1
+						className={`text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight mb-4 sm:mb-6 ${
 						isDarkMode ? 'text-gray-100' : 'text-gray-900'
 					}`}
-				>
-					Instant Customer Resolutions <br className='hidden sm:inline' /> Through Intelligent Chat Service
-				</h1>
-				<p className={`text-base sm:text-lg md:text-xl mb-6 sm:mb-8 max-w-xl mx-auto ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-					Deliver real-time support with a human-like touch — our intelligent chat service understands, responds, and resolves just like your best
-					agents.
-				</p>
-
-				{/* Button Row */}
-				<div className='flex items-center justify-center gap-4 mb-6'>
-					{/* Start for Free button with smooth slide */}
-					<button
-						className={`px-6 py-3 rounded-full font-semibold shadow-md transition-all duration-500 transform ${showInput ? '-translate-x-3' : ''} ${
-							isDarkMode ? 'bg-green-400 text-gray-900 hover:bg-green-300' : 'bg-green-600 text-white hover:bg-green-700'
-						}`}
 					>
-						Start for Free
-					</button>
+						Instant Customer Resolutions <br className='hidden sm:inline' /> Through Intelligent Chat Service
+					</h1>
+					<p className={`text-base sm:text-lg md:text-xl mb-6 sm:mb-8 max-w-xl mx-auto ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+						Deliver real-time support with a human-like touch — our intelligent chat service understands, responds, and resolves just like your best
+						agents.
+					</p>
 
-					{/* Contact Us + input wrapper with smooth expand */}
-					<div
-						className={`flex items-center rounded-full overflow-hidden transition-all duration-500 ${
-							showInput ? 'w-[320px]' : 'w-[140px]'
-						} h-[48px] shadow-md ${isDarkMode ? 'bg-gray-900' : 'bg-white'}`}
-					>
-						{/* Input Field */}
-						<input
-							type='email'
-							value={email}
-							onChange={(e) => setEmail(e.target.value)}
-							placeholder='Your Email'
-							className={`transition-all duration-500 ease-in-out text-sm px-4 py-2 outline-none border-none ${
-								showInput ? 'w-full opacity-100' : 'w-0 opacity-0'
-							} ${isDarkMode ? 'bg-gray-900 text-gray-100 placeholder-gray-400' : 'bg-white text-gray-900 placeholder-gray-500'}`}
-						/>
-
-						{/* Contact Us Button (same height as input) */}
+					{/* Button Row */}
+					<div className='flex items-center justify-center gap-4 mb-6'>
+						{/* Start for Free button with smooth slide */}
 						<button
-							onClick={(e) => {
-								if (!showInput) {
-									setShowInput(true);
-								} else {
-									handleContactUs(e);
-								}
-							}}
-							type='button'
-							className={`whitespace-nowrap h-full px-4 text-sm font-semibold transition-colors ${
-								isDarkMode ? 'text-gray-200 hover:text-white' : 'text-gray-800 hover:text-black'
+							onClick={() => document.getElementById('pricing-section').scrollIntoView({ behavior: 'smooth' })}
+							className={`px-6 py-3 rounded-full font-semibold shadow-md transition-all duration-500 transform ${
+							showInput ? '-translate-x-3' : ''
+						} ${isDarkMode ? 'bg-green-400 text-gray-900 hover:bg-green-300' : 'bg-green-600 text-white hover:bg-green-700'}`}
+						>
+							Start for Free
+						</button>
+
+						{/* Contact Us + input wrapper with smooth expand */}
+						<div
+							className={`flex items-center rounded-full overflow-hidden transition-all duration-500 border shadow-md ${
+							showInput ? 'w-[320px]' : 'w-[140px]'
+						} h-[48px] ${
+							isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'
+						}`}
+						>
+							{/* Input Field */}
+							<input
+								type='email'
+								value={email}
+								onChange={(e) => setEmail(e.target.value)}
+								placeholder='Your Email'
+								className={`transition-all duration-500 ease-in-out text-sm px-4 py-2 outline-none border-none ${
+								showInput ? 'w-full opacity-100' : 'w-0 opacity-0 px-0 py-0'
+							} ${
+								isDarkMode
+									? 'bg-gray-900 text-gray-100 placeholder-gray-400'
+									: 'bg-white text-gray-900 placeholder-gray-500'
+							}`}
+							/>
+
+							
+								<button
+									onClick={(e) => {
+										if (!showInput) {
+											setShowInput(true);
+										} else {
+											handleContactUs(e);
+										}
+									}}
+									type='button'
+									className={`flex-1 whitespace-nowrap h-full px-4 text-sm font-semibold transition-colors focus:outline-none ${
+										isDarkMode ? 'text-gray-200 hover:text-white' : 'text-gray-800 hover:text-black'
+									}`}
+								>
+									{isLoading ? 'Sending...' : 'Contact Us'}
+								</button>
+							
+						</div>
+					</div>
+
+					{/* Status message */}
+					{status && (
+						<div
+							className={`mt-2 text-sm font-medium px-3 py-2 rounded transition-colors duration-300 max-w-xs mx-auto ${
+								status.toLowerCase().includes('success')
+									? isDarkMode
+										? 'bg-green-900 text-green-300'
+										: 'bg-green-100 text-green-700'
+									: isDarkMode
+									? 'bg-red-900 text-red-300'
+									: 'bg-red-100 text-red-700'
 							}`}
 						>
-							{isLoading ? 'Sending...' : 'Contact Us'}
-						</button>
-					</div>
+							{status}
+						</div>
+					)}
 				</div>
 			</div>
-		</section>
-	);
-}
-
-// Features Section Component - Updated for Black & White theme with NEW creative icons
-function FeaturesSection({ isDarkMode }) {
-	const sectionBg = isDarkMode ? 'bg-gray-900 text-white' : 'bg-white text-gray-900';
-	const cardBg = isDarkMode ? 'bg-gray-800 text-gray-100' : 'bg-gray-50 text-gray-800';
-	const iconColor = isDarkMode ? 'text-green-400' : 'text-green-600';
-
-	const features = [
-		{
-			icon: <CheckCircle className={`w-5 h-5 ${iconColor}`} />,
-			text: 'Instant Support: Handle 80% of queries instantly, cutting wait time by 60%',
-		},
-		{
-			icon: <Clock className={`w-5 h-5 ${iconColor}`} />,
-			text: '24/7 Availability: Provide support around the clock',
-		},
-		{
-			icon: <Currency className={`w-5 h-5 ${iconColor}`} />,
-			text: 'Cost Efficiency: Reduce support expenses by 70%',
-		},
-		{
-			icon: <Globe className={`w-5 h-5 ${iconColor}`} />,
-			text: 'Multilingual Capability: Serve customers worldwide',
-		},
-		{
-			icon: <MessageCircle className={`w-5 h-5 ${iconColor}`} />,
-			text: 'Human-like Interaction: Escalate complex issues',
-		},
-		{
-			icon: <LineChart className={`w-5 h-5 ${iconColor}`} />,
-			text: 'Customer Insights: Real-time analytics',
-		},
-	];
-
-	return (
-		<section className={`py-20 ${sectionBg}`}>
-			<div className='container mx-auto px-6 flex flex-col md:flex-row items-center gap-12'>
-				{/* Chat Mockup */}
-				<ComparisonSection isDarkMode={isDarkMode} />
-
-				{/* Text Content */}
-				<div className='w-full md:w-1/2'>
-					<h2 className='text-3xl sm:text-4xl font-bold mb-4 leading-snug'>
-						Assist customers on their journeys with <span className='text-blue-600'>Live Chat</span>
-					</h2>
-					<p className='mb-6 text-base sm:text-lg'>
-						Offer a clear route for customer questions and provide immediate answers through a lightweight live chat widget.
-					</p>
-					<ul className='space-y-4'>
-						{features.map((feature, index) => (
-							<li key={index} className='flex items-start gap-3'>
-								{feature.icon}
-								<span>{feature.text}</span>
-							</li>
-						))}
-					</ul>
-					<a href='#' className='inline-block mt-8 text-blue-600 hover:underline font-medium transition'>
-						Learn more about Live Chat →
-					</a>
-				</div>
-			</div>
+			<div
+				className={`absolute bottom-0 left-0 w-full h-1/3 transform rotate-6 -translate-y-1/2 opacity-50 hidden md:block animate-fadeIn animate-delay-300 ${
+					isDarkMode ? 'bg-gray-800' : 'bg-gray-100'
+				}`}
+			></div>
+			<div
+				className={`absolute top-0 right-0 w-full h-1/2 transform -rotate-12 translate-y-1/2 opacity-30 hidden md:block animate-fadeIn animate-delay-400 ${
+					isDarkMode ? 'bg-gray-700' : 'bg-gray-200'
+				}`}
+			></div>
 		</section>
 	);
 }
@@ -340,32 +391,31 @@ function FeaturesSection({ isDarkMode }) {
 const pricingPlans = [
 	{
 		name: 'Starter',
-		price: '₹2,400',
+		price: '₹0',
 		duration: '/mo.',
-		description: 'Ideal for small businesses focused on enhancing customer satisfaction via live chat support.',
-		includes: 'Includes up to 3 agents',
-		features: ['100 Billable conversations', 'Basic analytics', 'Live visitors list', 'Operating hours'],
-		buttonText: 'Selected',
-		selected: true,
+		description: 'Ideal for solo entrepreneurs and small businesses.',
+		includes: 'Includes 1 agent',
+		features: ['20 conversations', '1 integration', 'Live visitors list', 'Operating hours'],
+		buttonText: 'Select plan',
 	},
 	{
 		name: 'Growth',
-		price: '₹4,900',
+		price: '₹3,900',
 		duration: '/mo.',
-		tag: 'POPULAR',
+		// tag: 'POPULAR',
 		description: 'Ideal for teams of all sizes prioritizing customer service as their competitive advantage.',
-		includes: 'Includes up to 5 agents',
-		features: ['Up to 2,000 Billable conversations', 'Advanced analytics', 'Tidio power features', 'No Tidio branding (add-on)', 'Permissions'],
+		includes: 'Includes 1 agent',
+		features: ['Up to 2,000 Billable conversations', '2 integrations', 'Advanced analytics', 'No Nimble AI branding (add-on)', 'Permissions'],
 		buttonText: 'Select plan',
 	},
 	{
 		name: 'Plus',
-		price: '₹62,000',
+		price: '₹30,000',
 		duration: '/mo.',
 		description: 'For businesses requiring better limits, additional integrations, advanced features, and premium support.',
-		includes: 'Includes up to 10 agents',
-		features: ['Custom quota of Billable conversations', 'Dedicated Success Manager', 'Custom branding', 'Multisite', 'Departments'],
-		buttonText: 'Contact sales',
+		includes: 'Includes up to 5 agents',
+		features: ['Up to 20,000 Billable conversations', '2 integrations', 'Dedicated Success Manager', 'Custom branding', 'Departments'],
+		buttonText: 'Select plan',
 	},
 	{
 		name: 'Premium',
@@ -374,21 +424,22 @@ const pricingPlans = [
 		description: 'For more complex businesses',
 		includes: 'Unlimited agents',
 		features: [
-			'Lyro as a managed service',
-			'Guaranteed 50% Lyro AI resolution rate',
+			'Guaranteed 50% Nimble AI resolution rate',
 			'Priority Service + Premium Support',
-			'Super admin role',
 			'Analysis & monitoring',
+			'Dedicated Success Manager',
+			'Custom branding',
+			'Departments',
 		],
-		buttonText: 'Contact sales',
+		buttonText: 'Select plan',
 	},
 ];
 
-function PricingSection({ isDarkMode }) {
+function PricingSection({ isDarkMode, onPlanSelect }) {
 	return (
-		<section className={`py-20 px-4 ${isDarkMode ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'}`}>
+		<section id='pricing-section' className={`py-20 px-4 ${isDarkMode ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'}`}>
 			<div className='max-w-7xl mx-auto text-center mb-12'>
-				<h2 className='text-4xl font-extrabold mb-4'>Plans that grow with you</h2>
+				<h2 className='text-4xl font-extrabold mb-4'>Plans that you grow with</h2>
 				<p className='text-lg max-w-2xl mx-auto'>Choose a plan that fits your business size, needs, and goals.</p>
 			</div>
 
@@ -435,7 +486,7 @@ function PricingSection({ isDarkMode }) {
 						{/* Bottom Button Block */}
 						<div className='mt-6'>
 							<button
-								disabled={plan.selected}
+								onClick={() => onPlanSelect(plan)}
 								className={`w-full py-3 rounded-md font-medium text-sm transition transform duration-300 ${
 									plan.selected ? 'bg-gray-100 text-gray-400 cursor-default' : 'bg-blue-600 text-white hover:bg-blue-700 hover:scale-105'
 								}`}
@@ -452,13 +503,13 @@ function PricingSection({ isDarkMode }) {
 
 const SeamlessIntegrations = ({ isDarkMode }) => {
 	const integrations = [
-		{ src: '/integrations/mailchimp.png', bg: 'bg-yellow-200', alt: 'Mailchimp' },
-		{ src: '/integrations/hubspot.png', bg: 'bg-rose-100', alt: 'HubSpot' },
-		{ src: '/integrations/wordpress.png', bg: 'bg-blue-100', alt: 'WordPress' },
-		{ src: '/integrations/shopify.png', bg: 'bg-green-100', alt: 'Shopify' },
-		{ src: '/integrations/squarespace.png', bg: 'bg-violet-100', alt: 'Squarespace' },
-		{ src: '/integrations/zendesk.png', bg: 'bg-gray-100', alt: 'Zendesk' },
-		{ src: '/integrations/other.png', bg: 'bg-orange-100', alt: 'Other' },
+		{ src: require('./integrations/mailchimp.png'), bg: 'bg-yellow-200', alt: 'Mailchimp' },
+		{ src: require('./integrations/hubspot.png'), bg: 'bg-rose-100', alt: 'HubSpot' },
+		{ src: require('./integrations/wordpress.png'), bg: 'bg-blue-100', alt: 'WordPress' },
+		{ src: require('./integrations/shopify.png'), bg: 'bg-green-100', alt: 'Shopify' },
+		{ src: require('./integrations/squarespace.png'), bg: 'bg-violet-100', alt: 'Squarespace' },
+		{ src: require('./integrations/zendesk.png'), bg: 'bg-gray-100', alt: 'Zendesk' },
+		// { src: require('./integrations/other.png'), bg: 'bg-orange-100', alt: 'Other' },
 	];
 
 	return (
@@ -469,38 +520,22 @@ const SeamlessIntegrations = ({ isDarkMode }) => {
 				{/* Icons */}
 				<div className='flex flex-wrap justify-center items-center gap-4 sm:gap-6 mb-6 md:p-6'>
 					{integrations.map((item, idx) => (
-						<div
-							key={idx}
-							className={`${item.bg} rounded-full w-20 h-20 flex items-center justify-center`}
-							style={{ position: 'absolute', left: `${idx * 60}px`, border: '5px solid #fff' }}
-						>
+						<div key={idx} className={`${item.bg} rounded-full w-20 h-20 flex items-center justify-center border-4 border-white`}>
 							<img src={item.src} alt={item.alt} className='w-10 h-10 object-contain' />
 						</div>
 					))}
 				</div>
 
-				<p className='text-sm text-gray-500 dark:text-gray-400'>and more than 120+ tools to integrate</p>
+				{/* <p className='text-sm text-gray-500 dark:text-gray-400'>and more than 120+ tools to integrate</p> */}
 			</div>
 		</section>
 	);
 };
 
-const IntegrationCard = ({ icon, label, isDarkMode }) => (
-	<div
-		className={`flex flex-col items-center justify-center text-center gap-2 rounded-xl border backdrop-blur-md transition-all duration-300 ease-in-out transform hover:-translate-y-1 hover:scale-[1.02] px-4 py-5 min-w-[100px] ${
-			isDarkMode
-				? 'bg-white/5 border-white/10 text-gray-100 shadow-[0_4px_12px_rgba(255,255,255,0.05)] hover:shadow-[0_10px_25px_rgba(255,255,255,0.1)]'
-				: 'bg-white/50 border-gray-200 text-gray-800 shadow-[0_4px_12px_rgba(0,0,0,0.05)] hover:shadow-[0_10px_25px_rgba(0,0,0,0.1)]'
-		}`}
-	>
-		<div className='mb-1'>{icon}</div>
-		<span className='text-xs font-medium tracking-wide opacity-80'>{label}</span>
-	</div>
-);
-
 // About Section Component (existing) with animations and centered content
 function AboutSection({ isDarkMode }) {
 	const [aboutRef, aboutVisible] = useIntersectionObserver({ threshold: 0.1 });
+	const [open, setOpen] = React.useState(false);
 
 	return (
 		<section
@@ -509,51 +544,59 @@ function AboutSection({ isDarkMode }) {
 				isDarkMode ? 'bg-gray-800' : 'bg-gray-50'
 			}`}
 		>
-			<div className='container mx-auto px-4 flex flex-col md:flex-row items-center justify-center gap-8 md:gap-12'>
-				<div className='md:w-1/2 text-center animate-slideInUp'>
-					<span
-						className={`inline-block text-xs sm:text-sm font-medium px-2 py-0.5 sm:px-3 sm:py-1 rounded-full mb-4 sm:mb-6 ${
-							isDarkMode ? 'bg-gray-700 text-gray-200' : 'bg-gray-100 text-gray-700'
+			<div className='container mx-auto px-4 flex flex-col items-center justify-center gap-8 md:gap-12'>
+				<div className='w-full flex flex-col items-center'>
+					<button
+						onClick={() => setOpen((v) => !v)}
+						className={`inline-block text-xs sm:text-sm font-medium px-2 py-0.5 sm:px-3 sm:py-1 rounded-full mb-4 sm:mb-6 focus:outline-none focus:ring-2 focus:ring-green-400 transition-colors duration-300 ${
+							isDarkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
 						}`}
+						aria-expanded={open}
+						aria-controls='about-nimble-content'
 					>
 						About Nimble AI
-					</span>
-					<h2 className={`text-2xl sm:text-3xl md:text-4xl font-bold leading-tight mb-4 sm:mb-6 ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>
-						Nimble AI empowers your business with cutting-edge AI solutions, driving unparalleled efficiency and strategic advantage.
-					</h2>
-					<p className={`text-sm sm:text-lg mb-6 sm:mb-8 max-w-xl mx-auto ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-						At Nimble AI, we harness the power of advanced artificial intelligence to drive business transformation. Our cutting-edge solutions:
-						Elevate customer support with intelligent, responsive systems Automate complex workflows to boost efficiency and reduce manual effort
-						Implement intelligent business logic for smarter, faster decision-making Founded by IIT Bombay alumni with over 8 years of deep
-						expertise in AI, machine learning, and related domains, our team combines technical excellence with real-world insights. This ensures
-						Nimble AI consistently delivers forward-thinking, impactful innovations that keep our clients ahead of the curve.
-					</p>
+						<svg
+							className={`w-4 h-4 ml-2 inline-block transform transition-transform duration-300 ${open ? 'rotate-180' : ''} ${
+								isDarkMode ? 'text-gray-200' : 'text-gray-700'
+							}`}
+							fill='none'
+							stroke='currentColor'
+							viewBox='0 0 24 24'
+							xmlns='http://www.w3.org/2000/svg'
+						>
+							<path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M19 9l-7 7-7-7' />
+						</svg>
+					</button>
 				</div>
-				<div className='md:w-1/2 grid grid-cols-1 gap-4 sm:gap-6 animate-fadeIn animate-delay-200 max-w-xs sm:max-w-sm mx-auto'>
-					<InfoCard title='Beta Access:' value='Q2, 2025' isDarkMode={isDarkMode} />
-					<InfoCard title='Implementation:' value='Founder-led Onboarding' isDarkMode={isDarkMode} />
-					<InfoCard
-						title='Your First Demo Is on Us – Try It Free!'
-						// value='Your First Demo Is on Us – Try It Free!'
-						// icon={
-						// 	<svg
-						// 		className={`w-4 h-4 sm:w-5 sm:h-5 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}
-						// 		fill='none'
-						// 		stroke='currentColor'
-						// 		viewBox='0 0 24 24'
-						// 		xmlns='http://www.w3.org/2000/svg'
-						// 	>
-						// 		<path
-						// 			strokeLinecap='round'
-						// 			strokeLinejoin='round'
-						// 			strokeWidth='2'
-						// 			d='M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8V4m0 12v4m-6-2h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z'
-						// 		></path>
-						// 	</svg>
-						// }
-						isDarkMode={isDarkMode}
-					/>
-				</div>
+				{open && (
+					<div id='about-nimble-content' className='w-full flex flex-col items-center justify-center gap-8 md:gap-12'>
+						<div className='w-full max-w-2xl text-center animate-slideInUp'>
+							<h2
+								className={`text-2xl sm:text-3xl md:text-4xl font-bold leading-tight mb-4 sm:mb-6 ${
+									isDarkMode ? 'text-gray-100' : 'text-gray-900'
+								}`}
+							>
+								Nimble AI empowers your business with cutting-edge AI solutions, driving unparalleled efficiency and strategic advantage.
+							</h2>
+							<div className={`text-sm sm:text-lg mb-6 sm:mb-8 max-w-xl mx-auto ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+								<p className='mb-2'>
+									At Nimble AI, we harness the power of advanced artificial intelligence to enable true business transformation. Our
+									innovative solutions are designed to:
+								</p>
+								<ul className='list-disc pl-5 mb-4 space-y-2 mt-0 text-left'>
+									<li className='text-left'>Elevate customer support with intelligent, always-on systems</li>
+									<li className='text-left'>Automate complex workflows to boost operational efficiency and minimize manual effort</li>
+									<li className='text-left'>Enable smarter, faster decisions through intelligent business logic</li>
+								</ul>
+								<p>
+									Founded by IIT Bombay alumni with over 8 years of hands-on experience in AI, machine learning, and automation, our team
+									blends deep technical expertise with practical, real-world insight. This unique combination allows Nimble AI to consistently
+									deliver future-ready, impactful innovations that help our clients stay ahead in an ever-evolving digital landscape.
+								</p>
+							</div>
+						</div>
+					</div>
+				)}
 			</div>
 		</section>
 	);
@@ -571,201 +614,6 @@ const InfoCard = ({ title, value, icon, isDarkMode }) => (
 			<span className={`text-sm sm:text-base font-medium ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>{title}</span>
 		</div>
 		<span className={`text-sm sm:text-base font-semibold ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>{value}</span>
-	</div>
-);
-
-const messages = [
-	{ type: 'ai', text: 'Hello! How can I assist you today?' },
-	{ type: 'customer', text: 'How do I create a Return Request?' },
-	{
-		type: 'ai',
-		text: 'You can create a Return in three simple steps: 1) Tap on MyOrders 2) Choose the item to be Returned 3) Enter details requested and create a return request',
-	},
-	{ type: 'customer', text: 'Where should I self-ship the Returns?' },
-	{
-		type: 'ai',
-		text: 'You can send the return to any one of the following returns processing facilities listed below. Please ensure that you specify the name of the seller you purchased the products from (You can find the seller name on your order invoice) and dispatch the package to the address listed below. Kindly do not send it to any other address as the return package would not be treated as accepted."',
-	},
-	{ type: 'customer', text: 'I have created a Return request. When will I get the refund' },
-	{
-		type: 'ai',
-		text: "Refund will be initiated upon successful pickup as per the Returns Policy. The refund amount is expected to reflect in the customer account within the following timelines: NEFT - 1 to 3 business days post refund initiation, Cyntra Credit - Instant, Online Refund – 7 to 10 days post refund initiation, depending on your bank partner, 'PhonePe wallet' – Instant",
-	},
-];
-
-function ComparisonSection({ isDarkMode }) {
-	const [visibleMessages, setVisibleMessages] = useState([]);
-	const [typingIndex, setTypingIndex] = useState(-1);
-	const hasBeenVisibleRef = useRef(false);
-	const chatContainerRef = useRef(null);
-
-	const useIntersectionObserver = ({ threshold = 0.1 } = {}) => {
-		const [entry, setEntry] = useState(null);
-		const observer = useRef(null);
-
-		const ref = useCallback(
-			(node) => {
-				if (observer.current) observer.current.disconnect();
-				observer.current = new IntersectionObserver(([entry]) => setEntry(entry), {
-					threshold,
-				});
-				if (node) observer.current.observe(node);
-			},
-			[threshold]
-		);
-
-		return [ref, entry?.isIntersecting || false];
-	};
-
-	const [intersectionRef, comparisonVisible] = useIntersectionObserver();
-
-	useEffect(() => {
-		if (chatContainerRef.current) {
-			chatContainerRef.current.scrollTo({ top: chatContainerRef.current.scrollHeight, behavior: 'smooth' });
-		}
-	}, [visibleMessages, typingIndex]);
-
-	const startChatAnimation = () => {
-		let index = 0;
-		let isCancelled = false;
-
-		const showNextMessage = () => {
-			if (isCancelled || index >= messages.length) return;
-			const msg = messages[index];
-
-			if (msg.type === 'ai') {
-				setTypingIndex(index);
-				setTimeout(() => {
-					if (isCancelled) return;
-					setVisibleMessages((prev) => [...prev, msg]);
-					setTypingIndex(-1);
-					index++;
-					setTimeout(showNextMessage, 700);
-				}, 700);
-			} else {
-				setTimeout(() => {
-					if (isCancelled) return;
-					setVisibleMessages((prev) => [...prev, msg]);
-					index++;
-					setTimeout(showNextMessage, 700);
-				}, 500);
-			}
-		};
-
-		const initTimeout = setTimeout(showNextMessage, 300);
-
-		return () => {
-			isCancelled = true;
-			clearTimeout(initTimeout);
-		};
-	};
-
-	useEffect(() => {
-		let timeout;
-		if (comparisonVisible && !hasBeenVisibleRef.current) {
-			hasBeenVisibleRef.current = true;
-			timeout = setTimeout(() => {
-				setVisibleMessages([]);
-				setTypingIndex(-1);
-				startChatAnimation();
-			}, 1000);
-		} else if (!comparisonVisible && hasBeenVisibleRef.current) {
-			hasBeenVisibleRef.current = false;
-		}
-		return () => clearTimeout(timeout);
-	}, [comparisonVisible]);
-
-	return (
-		<section
-			ref={intersectionRef}
-			className={`py-12 sm:py-20 transition-opacity duration-1000 ${comparisonVisible ? 'opacity-100' : 'opacity-0'} ${
-				isDarkMode ? 'bg-gray-900' : 'bg-white'
-			}`}
-		>
-			<div className='w-[450px] container mx-auto px-4 text-center'>
-				<div className='flex flex-col lg:flex-row justify-center items-stretch gap-6 sm:gap-8'>
-					<div
-						className={`w-full rounded-xl shadow-lg p-4 sm:p-6 flex flex-col animate-fadeIn max-w-md mx-auto ${
-							isDarkMode ? 'bg-gray-800' : 'bg-gray-100'
-						}`}
-					>
-						<h3
-							className={`text-lg sm:text-xl font-semibold mb-4 sm:mb-6 text-center flex items-center justify-center gap-1.5 sm:gap-2 ${
-								isDarkMode ? 'text-gray-100' : 'text-gray-900'
-							}`}
-						>
-							<span className={`text-2xl sm:text-3xl ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>◎</span> Nimble AI Chat
-						</h3>
-
-						<div
-							ref={chatContainerRef}
-							className='space-y-3 h-[400px] w-full overflow-y-auto pr-1 scrollbar-none'
-							style={{ scrollbarWidth: 'none' }}
-						>
-							{visibleMessages.map((msg, idx) =>
-								msg.type === 'ai' ? (
-									<AIMessage key={idx} text={msg.text} isDarkMode={isDarkMode} index={idx} />
-								) : (
-									<CustomerMessage key={idx} text={msg.text} isDarkMode={isDarkMode} index={idx} />
-								)
-							)}
-							{typingIndex !== -1 && <TypingIndicator isDarkMode={isDarkMode} />}
-						</div>
-					</div>
-				</div>
-			</div>
-		</section>
-	);
-}
-
-const CustomerMessage = ({ text, isDarkMode, index }) => {
-	const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-	return (
-		<div className='flex justify-end animate-slideInDown' style={{ animationDelay: `${index * 0.3}s`, animationFillMode: 'both' }}>
-			<div className={`p-2 sm:p-3 rounded-lg max-w-[80%]  shadow-sm ${isDarkMode ? 'bg-gray-700 text-gray-100' : 'bg-gray-900 text-white'}`}>
-				<p className='text-xs sm:text-sm text-left w-full'>{text}</p>
-				<div className='w-full text-[10px] text-gray-400 mb-1 self-end text-right'>[{timestamp}]</div>
-			</div>
-		</div>
-	);
-};
-
-const AIMessage = ({ text, link, isDarkMode, index }) => {
-	const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-	return (
-		<div className='flex justify-start animate-slideInDown' style={{ animationDelay: `${index * 0.3}s`, animationFillMode: 'both' }}>
-			<div
-				className={`p-2 sm:p-3 rounded-lg max-w-[80%] text-left shadow-sm border ${
-					isDarkMode ? 'bg-gray-700 text-gray-200 border-gray-600' : 'bg-white text-gray-800 border-gray-200'
-				}`}
-			>
-				<p className='text-xs sm:text-sm'>
-					{text}
-					{link && (
-						<a href={link} className='text-blue-600 hover:underline ml-1 text-xs sm:text-sm' target='_blank' rel='noopener noreferrer'>
-							refer to this article.
-						</a>
-					)}
-				</p>
-				<span className=' text-[10px] text-gray-400'>[{timestamp}]</span>
-			</div>
-		</div>
-	);
-};
-
-const TypingIndicator = ({ isDarkMode }) => (
-	<div className='flex justify-start animate-fadeIn'>
-		<div
-			className={`p-2 sm:p-3 rounded-lg max-w-[80%] shadow-sm border text-left ${
-				isDarkMode ? 'bg-gray-700 text-gray-200 border-gray-600' : 'bg-white text-gray-800 border-gray-200'
-			}`}
-		>
-			<div className='flex items-center space-x-1'>
-				<span className='w-1.5 h-1.5 bg-current rounded-full animate-bounce' />
-				<span className='w-1.5 h-1.5 bg-current rounded-full animate-bounce delay-100' />
-				<span className='w-1.5 h-1.5 bg-current rounded-full animate-bounce delay-200' />
-			</div>
-		</div>
 	</div>
 );
 
@@ -885,7 +733,7 @@ function Footer({ isDarkMode }) {
 		>
 			<div className='container mx-auto px-4 text-center'>
 				<div className='flex flex-col sm:flex-row gap-3 sm:gap-4 mb-3 sm:mb-4 justify-center items-center'>
-					{/* "Write Us" button updated to mailto link */}
+					{/* "Write to Us" button updated to mailto link */}
 					<a
 						href='mailto:enquire@nimble.ai'
 						className={`px-4 py-1.5 sm:px-6 sm:py-2 font-semibold rounded-full shadow-lg transition duration-300 flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base ${
@@ -900,7 +748,7 @@ function Footer({ isDarkMode }) {
 								d='M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z'
 							/>
 						</svg>
-						Write Us
+						Write to Us
 					</a>
 				</div>
 
@@ -932,5 +780,137 @@ function Footer({ isDarkMode }) {
 		</footer>
 	);
 }
+
+// Plan Selection Modal Component
+const PlanSelectionModal = ({ isOpen, onClose, selectedPlan, formData, setFormData, onSubmit, isDarkMode, isSubmitting, submitSuccess }) => {
+	if (!isOpen) return null;
+
+	// Handler for backdrop click
+	const handleBackdropClick = (e) => {
+		if (e.target === e.currentTarget && !isSubmitting) {
+			onClose();
+		}
+	};
+
+	return (
+		<div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4' onClick={handleBackdropClick}>
+			<div
+				className={`w-full max-w-md sm:max-w-md rounded-lg shadow-xl ${
+					isDarkMode ? 'bg-gray-800 text-gray-100' : 'bg-white text-gray-900'
+				} mx-2 sm:mx-0`}
+			>
+				<div className='p-4 sm:p-6'>
+					{/* Only show header and cross if not showing success message */}
+					<div className='flex justify-between items-center mb-4'>
+						<h3 className='text-base sm:text-lg font-semibold'>{submitSuccess ? 'Success' : `Select ${selectedPlan?.name} Plan`} </h3>
+						<button onClick={onClose} className={`p-1 rounded-full hover:bg-opacity-20 ${isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'}`}>
+							<svg className='w-5 h-5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+								<path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M6 18L18 6M6 6l12 12' />
+							</svg>
+						</button>
+					</div>
+
+					{submitSuccess ? (
+						<div
+							className={`mb-4 p-3 rounded text-center font-medium text-sm sm:text-base ${
+								submitSuccess.startsWith('Thank') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+							}`}
+						>
+							{submitSuccess}
+						</div>
+					) : (
+						<form onSubmit={onSubmit} className='space-y-3 sm:space-y-4'>
+							<div>
+								<label className='block text-xs sm:text-sm font-medium mb-1'>Name *</label>
+								<input
+									type='text'
+									required
+									value={formData.name}
+									onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+									className={`w-full px-2 py-2 sm:px-3 sm:py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+										isDarkMode ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900'
+									}`}
+									placeholder='Enter your full name'
+								/>
+							</div>
+
+							<div>
+								<label className='block text-xs sm:text-sm font-medium mb-1'>Work Email *</label>
+								<input
+									type='email'
+									required
+									value={formData.email}
+									onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
+									className={`w-full px-2 py-2 sm:px-3 sm:py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+										isDarkMode ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900'
+									}`}
+									placeholder='Enter your work email'
+								/>
+							</div>
+
+							<div>
+								<label className='block text-xs sm:text-sm font-medium mb-1'>Mobile Number *</label>
+								<input
+									type='tel'
+									required
+									value={formData.mobile}
+									onChange={(e) => setFormData((prev) => ({ ...prev, mobile: e.target.value }))}
+									className={`w-full px-2 py-2 sm:px-3 sm:py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+										isDarkMode ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900'
+									}`}
+									placeholder='Enter your mobile number'
+								/>
+							</div>
+
+							<div>
+								<label className='block text-xs sm:text-sm font-medium mb-1'>Selected Plan</label>
+								<input
+									type='text'
+									value={formData.plan}
+									readOnly
+									className={`w-full px-2 py-2 sm:px-3 sm:py-2 border rounded-md bg-gray-100 text-gray-600 ${
+										isDarkMode ? 'bg-gray-600 border-gray-500 text-gray-300' : 'bg-gray-100 border-gray-300 text-gray-600'
+									}`}
+								/>
+							</div>
+
+							<div className='flex flex-col sm:flex-row gap-2 sm:gap-3 pt-3 sm:pt-4'>
+								<button
+									type='button'
+									onClick={onClose}
+									className={`w-full sm:w-auto py-2 px-4 border rounded-md font-medium transition-colors ${
+										isDarkMode ? 'border-gray-600 text-gray-300 hover:bg-gray-700' : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+									}`}
+								>
+									Cancel
+								</button>
+								<button
+									type='submit'
+									disabled={isSubmitting}
+									className={`w-full sm:w-auto py-2 px-4 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 transition-colors flex items-center justify-center ${
+										isSubmitting ? 'opacity-70 cursor-not-allowed' : ''
+									}`}
+								>
+									{isSubmitting ? (
+										<svg
+											className='animate-spin h-5 w-5 mr-2 text-white'
+											xmlns='http://www.w3.org/2000/svg'
+											fill='none'
+											viewBox='0 0 24 24'
+										>
+											<circle className='opacity-25' cx='12' cy='12' r='10' stroke='currentColor' strokeWidth='4'></circle>
+											<path className='opacity-75' fill='currentColor' d='M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z'></path>
+										</svg>
+									) : null}
+									{isSubmitting ? 'Submitting...' : 'Submit'}
+								</button>
+							</div>
+						</form>
+					)}
+				</div>
+			</div>
+		</div>
+	);
+};
 
 export default App;
