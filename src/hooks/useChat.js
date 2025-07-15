@@ -13,21 +13,21 @@ export function useChat() {
 	const [chatPosition, setChatPosition] = useState({ x: 0, y: 0 });
 	const [isDragging, setIsDragging] = useState(false);
 
-	// Persist chat history in localStorage
-	useEffect(() => {
-		const saved = localStorage.getItem('nimble-chat-history');
-		if (saved) {
-			try {
-				setChatHistory(JSON.parse(saved));
-			} catch {}
-		}
-	}, []);
-	useEffect(() => {
-		localStorage.setItem('nimble-chat-history', JSON.stringify(chatHistory));
-	}, [chatHistory]);
+	// // Persist chat history in localStorage
+	// useEffect(() => {
+	// 	const saved = localStorage.getItem('nimble-chat-history');
+	// 	if (saved) {
+	// 		try {
+	// 			setChatHistory(JSON.parse(saved));
+	// 		} catch {}
+	// 	}
+	// }, []);
+	// useEffect(() => {
+	// 	localStorage.setItem('nimble-chat-history', JSON.stringify(chatHistory));
+	// }, [chatHistory]);
 
 	useEffect(() => {
-		fetch('http://65.2.75.55:8000/ask', {
+		fetch('https://re40cbsv70.execute-api.ap-south-1.amazonaws.com/sendMessage', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({
@@ -101,7 +101,7 @@ export function useChat() {
 		setIsChatLoading(true);
 		try {
 			// Demo: send user message as 'userMessage' to the API
-			const response = await fetch('http://65.2.75.55:8000/ask', {
+			const response = await fetch('https://re40cbsv70.execute-api.ap-south-1.amazonaws.com/sendMessage', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({

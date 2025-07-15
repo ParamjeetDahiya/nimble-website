@@ -61,6 +61,13 @@ const ChatWidget = ({ isDarkMode }) => {
 		return () => clearTimeout(timer);
 	}, []);
 
+	// Always scroll to bottom on new message or when chat opens
+	useEffect(() => {
+		if (chatWindowRef.current) {
+			chatWindowRef.current.scrollTop = chatWindowRef.current.scrollHeight;
+		}
+	}, [chatHistory, isChatOpen]);
+
 	return (
 		<>
 			{/* Custom styles for smooth chat window and icon animation */}
@@ -164,7 +171,6 @@ const ChatWidget = ({ isDarkMode }) => {
 			{/* Floating Chat Window */}
 			{isChatOpen && (
 				<div
-					ref={chatWindowRef}
 					className={`fixed bottom-5 right-5 z-50 w-[95vw] max-w-xs sm:max-w-sm md:max-w-md ${
 						isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'
 					} rounded-xl shadow-2xl flex flex-col animate-chatWindowSlideIn ${isChatMinimized ? 'h-16' : 'h-[420px]'}`}
@@ -185,9 +191,10 @@ const ChatWidget = ({ isDarkMode }) => {
 						onTouchStart={handleDragStart}
 					>
 						<div className='flex items-center gap-2'>
-							<div className='flex flex-col'>
-								<span className={`font-semibold text-base ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>Nimble AI Assistant</span>
-								<span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>How can I help you?</span>
+							<div className='flex flex-row justify-center'>
+							<span className={`text-2xl sm:text-3xl ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>◎</span>
+								<span className={`flex ml-2 items-center font-semibold text-base align-center ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}> Nimble AI Assistant</span>
+								{/* <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>How can I help you?</span> */}
 							</div>
 						</div>
 						<div className='flex items-center gap-1'>
@@ -229,8 +236,9 @@ const ChatWidget = ({ isDarkMode }) => {
 					{!isChatMinimized && (
 						<>
 							<div
+								ref={chatWindowRef}
 								className={`flex-1 overflow-y-auto px-3 py-2 space-y-2 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'} chat-scrollbar`}
-								tabIndex={0}
+								abIndex={0}
 								aria-live='polite'
 							>
 								{chatHistory.length === 0 && (
@@ -272,12 +280,12 @@ const ChatWidget = ({ isDarkMode }) => {
 											<span className='w-2 h-2 bg-current rounded-full animate-bounce'></span>
 											<span className='w-2 h-2 bg-current rounded-full animate-bounce delay-100'></span>
 											<span className='w-2 h-2 bg-current rounded-full animate-bounce delay-200'></span>
-											<span className={`ml-2 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Nimble AI is typing...</span>
+											<span className={`ml-2 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Typing...</span>
 										</div>
 									</div>
 								)}
 								{/* Quick replies */}
-								{!isChatLoading && quickReplies && quickReplies.length > 0 && (
+								{chatHistory.length < 2 && quickReplies && quickReplies.length > 0 && (
 									<div className='flex flex-wrap gap-2 mt-2 animate-chatMsgSlideIn'>
 										{quickReplies.map((qr, i) => (
 											<button
